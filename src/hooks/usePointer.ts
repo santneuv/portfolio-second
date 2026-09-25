@@ -26,8 +26,10 @@ export function usePointer() {
     }
     const onLeave = () => {
       pointer.active = false
+      pointer.pressed = false
     }
     const onUp = (e: PointerEvent) => {
+      pointer.pressed = false
       // A finger lifting off the screen is like a mouse leaving.
       if (e.pointerType === 'touch') pointer.active = false
     }
@@ -38,17 +40,20 @@ export function usePointer() {
       if (e.target instanceof Element && e.target.closest(INTERACTIVE)) return
       Object.assign(click, toNdc(e))
       click.time = performance.now()
+      pointer.pressed = true
     }
 
     window.addEventListener('pointermove', onMove, { passive: true })
     window.addEventListener('pointerdown', onDown, { passive: true })
     window.addEventListener('pointerup', onUp, { passive: true })
+    window.addEventListener('pointercancel', onUp, { passive: true })
     document.documentElement.addEventListener('pointerleave', onLeave)
     window.addEventListener('blur', onLeave)
     return () => {
       window.removeEventListener('pointermove', onMove)
       window.removeEventListener('pointerdown', onDown)
       window.removeEventListener('pointerup', onUp)
+      window.removeEventListener('pointercancel', onUp)
       document.documentElement.removeEventListener('pointerleave', onLeave)
       window.removeEventListener('blur', onLeave)
     }

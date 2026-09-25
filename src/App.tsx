@@ -1,4 +1,5 @@
 import { lazy, Suspense, useState } from 'react'
+import { Hint } from './components/Hint/Hint'
 import { Nav } from './components/Nav/Nav'
 import { ThemeSwitcher } from './components/ThemeSwitcher/ThemeSwitcher'
 import { About } from './components/sections/About/About'
@@ -64,6 +65,7 @@ export function App() {
         <Projects />
         <Contact />
       </main>
+      {webgl && theme.id === 'glass' && <Hint>Click &amp; hold the tank to pump water</Hint>}
       <ThemeSwitcher value={theme.id} onChange={changeTheme} />
     </>
   )

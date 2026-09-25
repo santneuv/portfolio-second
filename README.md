@@ -20,7 +20,7 @@ The site ships with three visual styles. Switch between them with the "Style" pi
 | Theme | Look | Scene |
 | --- | --- | --- |
 | `particles` | Dark, neon | ~9k GPU particles morph sphere → torus knot → galaxy → ring |
-| `glass` | Light, pastel | Floating glass shapes over a drifting mesh gradient, regrouping per section |
+| `glass` | Light, pastel | A water ring toss toy: rings sink in a glass tank, pump water to thread them onto the pegs |
 | `tunnel` | Dark, neon | The camera flies through a wormhole, one stop per section |
 
 ### Mouse interaction
@@ -28,7 +28,7 @@ The site ships with three visual styles. Switch between them with the "Style" pi
 | Theme | Hover / move | Click on the background |
 | --- | --- | --- |
 | `particles` | Particles part around the cursor and light up | A shockwave ring ripples through the particles |
-| `glass` | The shape under the cursor grows and spins faster; nearby shapes drift away | The clicked shape jumps and spins |
+| `glass` | Moving through the water drags the rings along | Click & hold the tank to pump a water jet from the floor |
 | `tunnel` | A flashlight lights the wall you point at; fast movement speeds up the flow | A bright pulse races down the tunnel |
 
 The canvas sits behind the page with `pointer-events: none`, so `src/hooks/usePointer.ts` tracks the pointer on the window. Clicks on links and buttons are ignored. With `prefers-reduced-motion`, click effects are off and hover effects are toned down.
