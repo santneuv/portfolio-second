@@ -1,5 +1,6 @@
 import { PointMaterial } from '@react-three/drei'
 import { useFrame } from '@react-three/fiber'
+import { easing } from 'maath'
 import { Bloom, EffectComposer, Vignette } from '@react-three/postprocessing'
 import { useMemo, useRef } from 'react'
 import { AdditiveBlending, BackSide, CatmullRomCurve3, type ShaderMaterial, Vector3 } from 'three'
@@ -7,6 +8,7 @@ import { scrollState } from '../../lib/scrollState'
 import { neonA, neonB } from '../palettes'
 import fragmentShader from '../shaders/tunnel.frag.glsl?raw'
 import vertexShader from '../shaders/tunnel.vert.glsl?raw'
+import { clickAge, pointerRay } from '../pointer'
 import { LAST_STAGE, lerpStage, type SceneProps, stepStage } from '../stage'
 
 const RADIUS = 2.2
@@ -19,6 +21,7 @@ const intensity = [0.6, 0.5, 0.32, 0.8]
 // Scratch vectors reused every frame.
 const position = new Vector3()
 const lookTarget = new Vector3()
+const PULSE_LIFETIME = 4
 
 function createPath() {
   const points = Array.from({ length: 16 }, (_, k) => new Vector3(Math.sin(k * 0.7) * 3, Math.cos(k * 0.5) * 2, -k * 7))
@@ -47,6 +50,7 @@ export default function TunnelScene({ reducedMotion, effects }: SceneProps) {
   const material = useRef<ShaderMaterial>(null)
   const stage = useRef({ value: scrollState.stage })
   const path = useMemo(() => createPath(), [])
+  const warp = useRef({ value: 0, lastX: 0, lastY: 0 })
   const dust = useMemo(() => createDust(path, 1500), [path])
 
   const uniforms = useMemo(
@@ -55,6 +59,13 @@ export default function TunnelScene({ reducedMotion, effects }: SceneProps) {
       uIntensity: { value: 1 },
       uColorA: { value: neonA[0].clone() },
       uColorB: { value: neonB[0].clone() },
+      uFlow: { value: 0 },
+      uCamPos: { value: new Vector3() },
+      uMouseDir: { value: new Vector3(0, 0, -1) },
+      uMouseStrength: { value: 0 },
+      uCamT: { value: 0 },
+      uPulseAge: { value: 0 },
+      uPulseStrength: { value: 0 },
     }),
     [],
   )
@@ -72,6 +83,15 @@ export default function TunnelScene({ reducedMotion, effects }: SceneProps) {
     u.uIntensity.value = lerpStage(intensity, blend)
     if (!reducedMotion) u.uTime.value += dt
 
+    // Warp: fast pointer movement speeds up the flow of the rings.
+    const { pointer } = scrollState
+    const w = warp.current
+    const speed = dt > 0 ? Math.hypot(pointer.x - w.lastX, pointer.y - w.lastY) / dt : 0
+    w.lastX = pointer.x
+    w.lastY = pointer.y
+    easing.damp(w, 'value', Math.min(speed, 4), 0.4, dt)
+    if (!reducedMotion) u.uFlow.value += dt * (1.2 + w.value * 5)
+
     // Position along the tunnel follows the (continuous) stage, not the blend,
     // so movement is linear between stops.
     const s = Math.min(Math.max(stage.current.value, 0), LAST_STAGE)
@@ -83,11 +103,23 @@ export default function TunnelScene({ reducedMotion, effects }: SceneProps) {
     if (!reducedMotion) {
       // Small pointer-driven look-around.
       const { x, y } = scrollState.pointer
-      lookTarget.x += x * 0.6
-      lookTarget.y += y * 0.4
+      lookTarget.x += x * 0.7
+      lookTarget.y += y * 0.5
     }
     state.camera.position.copy(position)
     state.camera.lookAt(lookTarget)
+    state.camera.updateMatrixWorld()
+
+    // Flashlight follows the pointer.
+    u.uCamPos.value.copy(position)
+    u.uMouseDir.value.copy(pointerRay(state).ray.direction)
+    easing.damp(u.uMouseStrength, 'value', pointer.active ? 1 : 0, 0.25, dt)
+
+    // Click pulse (skipped with reduced motion).
+    const age = clickAge()
+    u.uCamT.value = t
+    u.uPulseAge.value = age
+    u.uPulseStrength.value = !reducedMotion && age < PULSE_LIFETIME ? 1 : 0
   })
 
   return (

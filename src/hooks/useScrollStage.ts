@@ -42,20 +42,13 @@ export function useScrollStage(ids: readonly string[]) {
       if (!frame) frame = requestAnimationFrame(update)
     }
 
-    const onPointerMove = (e: PointerEvent) => {
-      scrollState.pointer.x = (e.clientX / window.innerWidth) * 2 - 1
-      scrollState.pointer.y = -((e.clientY / window.innerHeight) * 2 - 1)
-    }
-
     update()
     window.addEventListener('scroll', schedule, { passive: true })
     window.addEventListener('resize', schedule)
-    window.addEventListener('pointermove', onPointerMove, { passive: true })
     return () => {
       cancelAnimationFrame(frame)
       window.removeEventListener('scroll', schedule)
       window.removeEventListener('resize', schedule)
-      window.removeEventListener('pointermove', onPointerMove)
     }
   }, [ids])
 

@@ -1,6 +1,6 @@
 // Visual themes. Each one pairs a CSS palette ([data-theme] in global.css)
 // with a 3D scene (src/three/scenes). Delete the ones you don't want.
-export type ThemeId = 'particles' | 'blob' | 'glass' | 'tunnel'
+export type ThemeId = 'particles' | 'glass' | 'tunnel'
 
 export interface Theme {
   id: ThemeId
@@ -11,7 +11,6 @@ export interface Theme {
 
 export const themes: Theme[] = [
   { id: 'particles', label: 'Particles', background: '#05060a' },
-  { id: 'blob', label: 'Blob', background: '#07060d' },
   { id: 'glass', label: 'Glass', background: '#f3efe9' },
   { id: 'tunnel', label: 'Tunnel', background: '#020308' },
 ]

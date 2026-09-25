@@ -15,14 +15,23 @@ npm run lint      # oxlint
 
 ## Themes
 
-The site ships with four visual styles. Switch between them with the "Style" pill in the corner, or with a URL parameter such as `?theme=glass`. The choice is remembered in `localStorage`.
+The site ships with three visual styles. Switch between them with the "Style" pill in the corner, or with a URL parameter such as `?theme=glass`. The choice is remembered in `localStorage`.
 
 | Theme | Look | Scene |
 | --- | --- | --- |
 | `particles` | Dark, neon | ~9k GPU particles morph sphere → torus knot → galaxy → ring |
-| `blob` | Dark, iridescent | Noise-displaced sphere, calm → spiky → smooth → pulsing |
 | `glass` | Light, pastel | Floating glass shapes over a drifting mesh gradient, regrouping per section |
 | `tunnel` | Dark, neon | The camera flies through a wormhole, one stop per section |
+
+### Mouse interaction
+
+| Theme | Hover / move | Click on the background |
+| --- | --- | --- |
+| `particles` | Particles part around the cursor and light up | A shockwave ring ripples through the particles |
+| `glass` | The shape under the cursor grows and spins faster; nearby shapes drift away | The clicked shape jumps and spins |
+| `tunnel` | A flashlight lights the wall you point at; fast movement speeds up the flow | A bright pulse races down the tunnel |
+
+The canvas sits behind the page with `pointer-events: none`, so `src/hooks/usePointer.ts` tracks the pointer on the window. Clicks on links and buttons are ignored. With `prefers-reduced-motion`, click effects are off and hover effects are toned down.
 
 Once you pick a favourite, you can delete the others:
 1. Remove the entry from `src/themes/themes.ts`.

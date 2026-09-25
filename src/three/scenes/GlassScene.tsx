@@ -1,10 +1,12 @@
 import { Environment, Float, Lightformer, MeshTransmissionMaterial, RoundedBox } from '@react-three/drei'
 import { useFrame } from '@react-three/fiber'
-import { useMemo, useRef } from 'react'
-import { Color, type Group, type ShaderMaterial } from 'three'
+import { easing } from 'maath'
+import { useEffect, useMemo, useRef } from 'react'
+import { Color, type Group, type Mesh, type ShaderMaterial, Vector3 } from 'three'
 import { scrollState } from '../../lib/scrollState'
 import fragmentShader from '../shaders/gradient.frag.glsl?raw'
 import vertexShader from '../shaders/gradient.vert.glsl?raw'
+import { pointerOnPlane, pointerRay } from '../pointer'
 import { lerpStage, type SceneProps, type StageBlend, stepStage } from '../stage'
 import { CameraRig } from './CameraRig'
 
@@ -36,6 +38,20 @@ const backgrounds = [
   ['#fda4af', '#fdba74', '#fde68a', '#c4b5fd'],
   ['#99f6e4', '#a5b4fc', '#f9a8d4', '#bef264'],
 ].map((set) => set.map((c) => new Color(c)))
+
+// Per-shape interaction state, mutated every frame.
+interface Motion {
+  hover: number // 0..1, eased
+  offset: Vector3 // pushed away from the pointer
+  bounce: number // vertical spring displacement after a click
+  bounceVelocity: number
+  spin: number // extra spin speed after a click, decays
+}
+
+const REPEL_RADIUS = 1.6
+const REPEL_DISTANCE = 0.45
+const pointerLocal = new Vector3()
+const repelTarget = new Vector3()
 
 function Shape({ index }: { index: number }) {
   switch (index) {
@@ -83,8 +99,17 @@ function blendFormation(k: number, blend: StageBlend): Vec3 {
 export default function GlassScene({ reducedMotion, effects }: SceneProps) {
   const layout = useRef<Group>(null)
   const items = useRef<(Group | null)[]>([])
+  const meshes = useRef<(Mesh | null)[]>([])
   const background = useRef<ShaderMaterial>(null)
   const stage = useRef({ value: scrollState.stage })
+  const hovered = useRef(-1)
+  const lastClick = useRef(scrollState.click.time)
+  const motion = useRef<Motion[]>(
+    tints.map(() => ({ hover: 0, offset: new Vector3(), bounce: 0, bounceVelocity: 0, spin: 0 })),
+  )
+
+  // Never leave the pointer cursor behind when the theme changes.
+  useEffect(() => () => document.documentElement.removeAttribute('data-scene-hover'), [])
 
   const uniforms = useMemo(
     () => ({ uTime: { value: 0 }, uColors: { value: backgrounds[0].map((c) => c.clone()) } }),
@@ -103,12 +128,58 @@ export default function GlassScene({ reducedMotion, effects }: SceneProps) {
     layout.current.position.y = narrow ? lerpStage(narrowLift, blend) : 0
     layout.current.scale.setScalar(narrow ? 0.4 : Math.min(Math.max(viewport.width / 5, 0.55), 1))
 
+    // Which shape is under the pointer (manual raycast: the canvas gets no events).
+    const { pointer, click } = scrollState
+    const targets = meshes.current.filter((m): m is Mesh => m !== null)
+    const hit = pointer.active ? pointerRay(state).intersectObjects(targets, false)[0] : undefined
+    const hoverIndex = hit ? meshes.current.indexOf(hit.object as Mesh) : -1
+    if (hoverIndex !== hovered.current) {
+      hovered.current = hoverIndex
+      document.documentElement.toggleAttribute('data-scene-hover', hoverIndex !== -1)
+    }
+
+    // A click on a shape makes it jump and spin.
+    if (click.time !== lastClick.current) {
+      lastClick.current = click.time
+      const clicked = pointerRay(state, click).intersectObjects(targets, false)[0]
+      const k = clicked ? meshes.current.indexOf(clicked.object as Mesh) : -1
+      if (k !== -1 && !reducedMotion) {
+        motion.current[k].bounceVelocity = 4.5
+        motion.current[k].spin = 9
+      }
+    }
+
+    const onPlane = pointer.active ? pointerOnPlane(state, pointerLocal) : null
+    if (onPlane) layout.current.worldToLocal(onPlane)
+
     items.current.forEach((item, k) => {
       if (!item) return
-      item.position.set(...blendFormation(k, blend))
+      const m = motion.current[k]
+      const [x, y, z] = blendFormation(k, blend)
+
+      // Shapes drift away from the pointer when it comes close.
+      repelTarget.set(0, 0, 0)
+      if (onPlane && !reducedMotion) {
+        repelTarget.set(x - onPlane.x, y - onPlane.y, 0)
+        const dist = repelTarget.length()
+        const push = Math.max(0, 1 - dist / REPEL_RADIUS) * REPEL_DISTANCE
+        repelTarget.normalize().multiplyScalar(push)
+      }
+      easing.damp3(m.offset, repelTarget, 0.3, dt)
+
+      // Damped spring for the click bounce.
+      m.bounceVelocity += (-m.bounce * 40 - m.bounceVelocity * 5) * dt
+      m.bounce += m.bounceVelocity * dt
+      m.spin *= Math.exp(-dt * 2)
+
+      easing.damp(m, 'hover', k === hoverIndex ? 1 : 0, 0.12, dt)
+      item.position.set(x + m.offset.x, y + m.offset.y + m.bounce, z)
+      item.scale.setScalar(1 + m.hover * 0.15)
+
       if (!reducedMotion) {
-        item.rotation.x += dt * (0.15 + k * 0.03)
-        item.rotation.y += dt * (0.2 + k * 0.02)
+        const speed = 1 + m.hover * 3 + m.spin
+        item.rotation.x += dt * (0.15 + k * 0.03) * speed
+        item.rotation.y += dt * (0.2 + k * 0.02) * speed
       }
     })
 
@@ -142,11 +213,16 @@ export default function GlassScene({ reducedMotion, effects }: SceneProps) {
               floatIntensity={reducedMotion ? 0 : 0.6}
             >
               {k === 2 ? (
-                <RoundedBox args={[0.8, 0.8, 0.8]} radius={0.16} smoothness={6}>
+                <RoundedBox
+                  ref={(el: Mesh | null) => void (meshes.current[k] = el)}
+                  args={[0.8, 0.8, 0.8]}
+                  radius={0.16}
+                  smoothness={6}
+                >
                   <GlassMaterial tint={tint} effects={effects} />
                 </RoundedBox>
               ) : (
-                <mesh>
+                <mesh ref={(el) => void (meshes.current[k] = el)}>
                   <Shape index={k} />
                   <GlassMaterial tint={tint} effects={effects} />
                 </mesh>

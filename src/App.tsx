@@ -5,6 +5,7 @@ import { About } from './components/sections/About/About'
 import { Contact } from './components/sections/Contact/Contact'
 import { Hero } from './components/sections/Hero/Hero'
 import { Projects } from './components/sections/Projects/Projects'
+import { usePointer } from './hooks/usePointer'
 import { useReducedMotion } from './hooks/useReducedMotion'
 import { useScrollStage } from './hooks/useScrollStage'
 import { useTheme } from './hooks/useTheme'
@@ -26,6 +27,7 @@ function supportsWebGL() {
 
 export function App() {
   const active = useScrollStage(sectionIds)
+  usePointer()
   const reducedMotion = useReducedMotion()
   const [webgl] = useState(supportsWebGL)
   const [theme, setTheme] = useTheme()

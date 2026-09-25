@@ -3,6 +3,11 @@ uniform float uSize;
 uniform float uPixelRatio;
 uniform float uMotion;     // 1 = full motion, 0 = prefers-reduced-motion
 uniform vec4 uWeights;     // blend weights for sphere, torus, galaxy, ring
+uniform vec3 uMouse;       // pointer on the z = 0 plane, in local space
+uniform float uMouseStrength;
+uniform vec3 uClickPos;    // last click, in local space
+uniform float uClickAge;   // seconds since the click
+uniform float uClickStrength;
 
 attribute vec3 aTorus;
 attribute vec3 aGalaxy;
@@ -10,6 +15,7 @@ attribute vec3 aRing;
 attribute float aRandom;
 
 varying float vRandom;
+varying float vBoost;
 
 mat3 rotateX(float a) {
   float c = cos(a), s = sin(a);
@@ -39,6 +45,21 @@ void main() {
   float peak = max(max(uWeights.x, uWeights.y), max(uWeights.z, uWeights.w));
   float transition = (1.0 - peak) * 2.0;
   pos += normalize(pos + vec3(0.0001)) * transition * (0.3 + aRandom) * 0.9;
+
+  // Pointer: particles near the cursor are pushed aside, opening a hole around it.
+  vec2 fromMouse = pos.xy - uMouse.xy;
+  float push = (1.0 - smoothstep(0.0, 1.2, length(fromMouse))) * uMouseStrength;
+  pos.xy += normalize(fromMouse + vec2(0.0001)) * push * 0.65;
+  pos.z += push * 0.5;
+
+  // Click: a shockwave ring expands from the click point and fades out.
+  vec2 fromClick = pos.xy - uClickPos.xy;
+  float front = uClickAge * 3.5;
+  float wave = exp(-pow((length(fromClick) - front) * 3.5, 2.0)) * exp(-uClickAge * 1.3) * uClickStrength;
+  pos.xy += normalize(fromClick + vec2(0.0001)) * wave * 0.4;
+  pos.z += wave * 0.2;
+
+  vBoost = push * 0.7 + wave * 1.6;
 
   // Gentle idle drift.
   float t = uTime * 0.6 + aRandom * 6.2831;

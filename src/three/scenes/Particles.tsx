@@ -1,11 +1,13 @@
 import { useFrame } from '@react-three/fiber'
+import { easing } from 'maath'
 import { useEffect, useMemo, useRef } from 'react'
-import { AdditiveBlending, type Group, type ShaderMaterial, Vector4 } from 'three'
+import { AdditiveBlending, type Group, type ShaderMaterial, Vector3, Vector4 } from 'three'
 import { scrollState } from '../../lib/scrollState'
 import { neonA as colorsA, neonB as colorsB } from '../palettes'
 import { createShapes } from './shapes'
 import fragmentShader from '../shaders/particles.frag.glsl?raw'
 import vertexShader from '../shaders/particles.vert.glsl?raw'
+import { clickAge, pointerOnPlane } from '../pointer'
 import { layoutObject, lerpStage, stepStage } from '../stage'
 
 // Dim the galaxy behind the project cards so text stays readable.
@@ -13,6 +15,10 @@ const intensities = [1, 1, 0.55, 1]
 // Horizontal offset (fraction of viewport width) on wide screens, so the
 // shape sits beside left-aligned text instead of behind it.
 const offsets = [0.24, 0.24, 0, 0]
+// How long a click shockwave stays alive, in seconds.
+const WAVE_LIFETIME = 3
+
+const hit = new Vector3()
 
 interface ParticlesProps {
   count: number
@@ -24,6 +30,7 @@ export function Particles({ count, reducedMotion }: ParticlesProps) {
   const material = useRef<ShaderMaterial>(null)
   const stage = useRef({ value: scrollState.stage })
   const weights = useRef([1, 0, 0, 0])
+  const lastClick = useRef(scrollState.click.time)
 
   const shapes = useMemo(() => createShapes(count), [count])
 
@@ -37,6 +44,11 @@ export function Particles({ count, reducedMotion }: ParticlesProps) {
       uColorA: { value: colorsA[0].clone() },
       uColorB: { value: colorsB[0].clone() },
       uIntensity: { value: 1 },
+      uMouse: { value: new Vector3(99, 99, 0) },
+      uMouseStrength: { value: 0 },
+      uClickPos: { value: new Vector3() },
+      uClickAge: { value: 0 },
+      uClickStrength: { value: 0 },
     }),
     [],
   )
@@ -65,6 +77,23 @@ export function Particles({ count, reducedMotion }: ParticlesProps) {
     u.uPixelRatio.value = state.gl.getPixelRatio()
     if (!reducedMotion) u.uTime.value += dt
     layoutObject(group.current, state, offsets, blend, reducedMotion, dt)
+
+    // Pointer repulsion, in the group's local space (it is offset and scaled).
+    const onPlane = pointerOnPlane(state, hit)
+    if (onPlane) u.uMouse.value.copy(group.current.worldToLocal(onPlane))
+    const targetStrength = scrollState.pointer.active && onPlane ? (reducedMotion ? 0.5 : 1) : 0
+    easing.damp(u.uMouseStrength, 'value', targetStrength, 0.2, dt)
+
+    // Click shockwave (skipped with reduced motion).
+    const { click } = scrollState
+    if (click.time !== lastClick.current) {
+      lastClick.current = click.time
+      const at = pointerOnPlane(state, hit, 0, click)
+      if (at) u.uClickPos.value.copy(group.current.worldToLocal(at))
+    }
+    const age = clickAge()
+    u.uClickAge.value = age
+    u.uClickStrength.value = !reducedMotion && age < WAVE_LIFETIME ? 1 : 0
   })
 
   return (

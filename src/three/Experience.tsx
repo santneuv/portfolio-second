@@ -7,7 +7,6 @@ import type { SceneProps } from './stage'
 // Each theme's scene is its own chunk, so only the active one is downloaded.
 const scenes: Record<ThemeId, ComponentType<SceneProps>> = {
   particles: lazy(() => import('./scenes/ParticlesScene')),
-  blob: lazy(() => import('./scenes/BlobScene')),
   glass: lazy(() => import('./scenes/GlassScene')),
   tunnel: lazy(() => import('./scenes/TunnelScene')),
 }

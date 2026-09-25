@@ -252,26 +252,6 @@ main {
 }
 
 /* Theme palettes: only variables change, components stay the same */
-[data-theme='blob'] {
-  --color-bg: #07060d;
-  --color-accent: #c084fc;
-  --color-accent-2: #5eead4;
-  --color-accent-hover: #d8b4fe;
-  --color-on-accent: #0b0714;
-  --accent-glow: rgba(192, 132, 252, 0.5);
-  --nav-bg: rgba(7, 6, 13, 0.85);
-  --text-shadow: 0 2px 24px rgba(7, 6, 13, 0.85);
-  --title-gradient: linear-gradient(120deg, #fff 20%, #f0abfc 60%, #5eead4 100%);
-  --card-bg: rgba(14, 10, 24, 0.6);
-  --card-hover: rgba(192, 132, 252, 0.5);
-  --card-hover-glow: rgba(192, 132, 252, 0.35);
-  --card-placeholder:
-    radial-gradient(circle at 30% 30%, rgba(192, 132, 252, 0.4), transparent 60%),
-    radial-gradient(circle at 75% 70%, rgba(94, 234, 212, 0.3), transparent 55%), #0d0a16;
-  --link-hover: #5eead4;
-  --chip-bg: rgba(7, 6, 13, 0.5);
-}
-
 [data-theme='glass'] {
   color-scheme: light;
   --color-bg: #f3efe9;
@@ -316,4 +296,9 @@ main {
     radial-gradient(circle at 75% 70%, rgba(96, 165, 250, 0.35), transparent 55%), #070a18;
   --link-hover: #60a5fa;
   --chip-bg: rgba(2, 3, 8, 0.6);
+}
+
+/* Set by 3D scenes while the pointer is over an interactive object */
+html[data-scene-hover] body {
+  cursor: pointer;
 }
