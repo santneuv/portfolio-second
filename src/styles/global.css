@@ -121,6 +121,25 @@ ul {
   transform: none;
 }
 
+/* Fixed WebGL layer behind the page content */
+.scene {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 1.2s ease;
+}
+
+.scene[data-ready='true'] {
+  opacity: 1;
+}
+
+main {
+  position: relative;
+  z-index: 1;
+}
+
 /* Reveal-on-scroll, toggled by useInView */
 .reveal {
   opacity: 0;
