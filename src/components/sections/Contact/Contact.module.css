@@ -5,7 +5,7 @@
 .content {
   max-width: 34rem;
   margin: 0 auto;
-  text-shadow: 0 2px 24px rgba(5, 6, 10, 0.8);
+  text-shadow: var(--text-shadow);
 }
 
 .text {
@@ -45,7 +45,14 @@
   left: 0;
   right: 0;
   bottom: var(--space-4);
+  padding: 0 var(--gutter);
   color: var(--color-muted);
   font-size: 0.8rem;
   text-align: center;
+}
+
+@media (max-width: 600px) {
+  .footer {
+    bottom: 4.5rem;
+  }
 }

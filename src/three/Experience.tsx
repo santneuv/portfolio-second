@@ -1,22 +1,29 @@
-import { PerformanceMonitor, Stars } from '@react-three/drei'
+import { PerformanceMonitor } from '@react-three/drei'
 import { Canvas } from '@react-three/fiber'
-import { Bloom, EffectComposer, Vignette } from '@react-three/postprocessing'
-import { useState } from 'react'
-import { CameraRig } from './CameraRig'
-import { Particles } from './Particles'
+import { type ComponentType, lazy, Suspense, useState } from 'react'
+import type { Theme, ThemeId } from '../themes/themes'
+import type { SceneProps } from './stage'
+
+// Each theme's scene is its own chunk, so only the active one is downloaded.
+const scenes: Record<ThemeId, ComponentType<SceneProps>> = {
+  particles: lazy(() => import('./scenes/ParticlesScene')),
+  blob: lazy(() => import('./scenes/BlobScene')),
+  glass: lazy(() => import('./scenes/GlassScene')),
+  tunnel: lazy(() => import('./scenes/TunnelScene')),
+}
 
 interface ExperienceProps {
+  theme: Theme
   reducedMotion: boolean
   onReady?: () => void
 }
 
 const maxDpr = () => Math.min(window.devicePixelRatio, 2)
-const particleCount = () => (window.matchMedia('(max-width: 768px)').matches ? 3500 : 9000)
 
-export default function Experience({ reducedMotion, onReady }: ExperienceProps) {
+export default function Experience({ theme, reducedMotion, onReady }: ExperienceProps) {
   const [dpr, setDpr] = useState(maxDpr)
   const [effects, setEffects] = useState(true)
-  const [count] = useState(particleCount)
+  const Scene = scenes[theme.id]
 
   return (
     <Canvas
@@ -25,7 +32,7 @@ export default function Experience({ reducedMotion, onReady }: ExperienceProps) 
       gl={{ antialias: false, powerPreference: 'high-performance' }}
       onCreated={() => onReady?.()}
     >
-      <color attach="background" args={['#05060a']} />
+      <color attach="background" args={[theme.background]} />
 
       {/* Drop resolution and post-processing on slow devices, restore when FPS recovers. */}
       <PerformanceMonitor
@@ -44,16 +51,9 @@ export default function Experience({ reducedMotion, onReady }: ExperienceProps) 
         }}
       />
 
-      <Stars radius={60} depth={40} count={count / 4} factor={3} saturation={0} fade speed={reducedMotion ? 0 : 0.5} />
-      <Particles count={count} reducedMotion={reducedMotion} />
-      {!reducedMotion && <CameraRig />}
-
-      {effects && (
-        <EffectComposer multisampling={0}>
-          <Bloom mipmapBlur intensity={1.4} luminanceThreshold={0.12} luminanceSmoothing={0.4} />
-          <Vignette offset={0.25} darkness={0.75} />
-        </EffectComposer>
-      )}
+      <Suspense fallback={null}>
+        <Scene reducedMotion={reducedMotion} effects={effects} />
+      </Suspense>
     </Canvas>
   )
 }

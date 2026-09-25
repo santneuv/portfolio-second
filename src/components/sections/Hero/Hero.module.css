@@ -1,18 +1,17 @@
 .content {
   max-width: 36rem;
-  text-shadow: 0 2px 24px rgba(5, 6, 10, 0.8);
+  text-shadow: var(--text-shadow);
   animation: enter 1s var(--ease-out) both;
 }
 
 .title {
   font-size: clamp(3rem, 9vw, 6rem);
-  background: linear-gradient(120deg, #fff 30%, var(--color-accent) 100%);
+  background: var(--title-gradient);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  /* text-shadow would bleed through the transparent fill, use a filter instead */
+  /* text-shadow would bleed through the transparent fill */
   text-shadow: none;
-  filter: drop-shadow(0 2px 24px rgba(5, 6, 10, 0.8));
 }
 
 .role {
@@ -64,6 +63,12 @@
   border-radius: 2px;
   background: var(--color-accent);
   animation: wheel 1.8s ease-in-out infinite;
+}
+
+@media (max-width: 600px) {
+  .scrollHint {
+    display: none;
+  }
 }
 
 @keyframes enter {

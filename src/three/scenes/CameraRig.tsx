@@ -1,6 +1,6 @@
 import { useFrame } from '@react-three/fiber'
 import { easing } from 'maath'
-import { scrollState } from '../lib/scrollState'
+import { scrollState } from '../../lib/scrollState'
 
 /** Subtle parallax: the camera drifts towards the pointer and keeps looking at the centre. */
 export function CameraRig() {
